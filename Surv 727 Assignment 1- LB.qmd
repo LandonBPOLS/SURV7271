@@ -1,0 +1,279 @@
+---
+title: "Assignment 1"
+author: "Landon Blacknall"
+---
+
+1)  Provide the link to the GitHub repo that you used to practice git from Week 1.
+
+<https://github.com/LandonBPOLS/SURV7271/tree/main>
+
+2)  Read in the .dta version and store in an object called angell_stata.
+
+```{r, include = FALSE}
+setwd("/Users/landonblacknall/Desktop/729B/LandonBlacknall2/_site/SURV727/SURV7271")
+library(haven)
+angell <- read_dta("/Applications/angell.dta")
+
+
+```
+
+3)  Read in the .txt version and store it in an object called angell_txt.
+
+```{r}
+angell_txt <- read.table(url("https://stats.oarc.ucla.edu/wp-content/uploads/2016/02/angell.txt"), header = FALSE)
+
+```
+
+4)  What are the differences between angell_stata and angell_txt? Are there differences in the classes of the individual columns?
+
+    ```{r}
+    identical(angell_stata, angell_txt)
+
+    all.equal(angell_stata, angell_txt)
+
+    mapply(setdiff, angell_stata, angell_txt)
+
+    class(angell_stata)
+
+    class(angell_txt)
+
+    typeof(angell_stata)
+
+
+
+    ```
+
+Using the "typeof" function, it appears that both datasets are identical. However, using the "class" function, the angell_stata dataset was a tbl whereas the angell_txt dataset was a data frame. Also, the header names are different.
+
+5.  Make any updates necessary so that angell_txt is the same as angell_stata.
+
+    ```{r}
+    angell_stata <- as.data.frame(angell_stata)
+    angell_txt <- as.data.frame(angell_txt)
+
+    colnames(angell_stata) <- c("city", "morint", "ethhet", "geomob", "region")
+    colnames(angell_txt) <- c("city", "morint", "ethhet", "geomob", "region")
+
+    identical(angell_stata, angell_txt)
+
+    ```
+
+6.  Describe the Ethnic Heterogeneity variable. Use descriptive statistics such as mean, median, standard deviation, etc. How does it differ by region
+
+    ```{r}
+    summary(angell_stata$ethhet)
+
+    median(angell_stata$ethhet)
+
+    mean(angell_stata$ethhet)
+
+    sd(angell_stata$ethhet)
+
+    length(angell_stata$ethhet)
+
+    ```
+
+The minimum and maximum boundaries consist of 10.60 and 84.50. The Median is 23.70. The Mean is 31.37 wiht the first and third quintile being 16.90 and 39.00
+
+7)  Install the "MASS" package, load the package. Then, load the Boston dataset.
+
+    ```{r}
+    setwd("/Users/landonblacknall/Desktop/729B/LandonBlacknall2/_site/SURV727/SURV7271")
+    install.packages("MASS")
+    library(MASS)
+    boston <- MASS::Boston
+
+    ```
+
+```{=html}
+<!-- -->
+```
+8)  What is the type of the Boston object?
+
+    ```{r}
+      typeof(boston)
+    ```
+
+```{=html}
+<!-- -->
+```
+9.  What is the class of teh Boston object?
+
+    ```{r}
+    class(boston)
+    ```
+
+```{=html}
+<!-- -->
+```
+10. How many of suburbs in the Boston set bound the Charles river?
+
+11. Do any of the suburbs of Boston appear to have particularly high crime rates? Tax rates? Pupil-teacher ratios? Comment on the range of each variable.
+
+    ```{r}
+    full_sum <- function(x){
+      sum2 <- summary(x)
+      iqr2 <- IQR(x)
+      range2 <- range(x)
+      mode2 <- names(sort(-table(x)))[1]
+      mean2 <- mean(x, na.rm = TRUE)
+      sd2 <- sd(x, na.rm = TRUE)
+      outlierup <- sum2[5] + (1.5 * iqr2)
+      outlierdwn <- sum2[2] - (1.5 * iqr2)
+      length2 <- length(x)
+      se2 <- sd2 / sqrt(length2)
+      
+      lower <- mean2 - 1.96 * se2
+      upper <- mean2 + 1.96 * se2
+      
+      #rounded <- c(range2[1], outlierdwn[1], sum2[2], sum2[3], iqr2[1], sum2[5], outlierup[1], range2[2], length2[1], mode2[1], mean2[1], sd2[1], lower[1], upper[1])
+      rounded <- round(c(
+        as.numeric(range2[1]), as.numeric(outlierdwn[1]), 
+        as.numeric(sum2[2]), as.numeric(sum2[3]), 
+        as.numeric(iqr2[1]), as.numeric(sum2[5]), 
+        as.numeric(outlierup[1]), as.numeric(range2[2]), 
+        as.numeric(length2[1]), as.numeric(mode2[1]), 
+        as.numeric(mean2[1]), as.numeric(sd2[1]), 
+        as.numeric(lower[1]), as.numeric(upper[1])
+      ), 2)
+      
+      full <- setNames(rounded, c("Min.", "Low Outli.", "1st Qu.", "Median", "IQR", "3rd Qu.", "High Outli.", "Max", "Length", "Mode", "Mean", "Sd", "95% CI", "95% CI"))
+      
+      
+      return(full)
+    }
+
+
+    full_sum(boston$crim)
+    full_sum(boston$ptratio)
+    full_sum(boston$tax)
+
+    library(dplyr)
+    highcrime <- boston %>%
+      filter(crim >= 9.07) 
+    highPT <- boston %>%
+      filter(ptratio >= 24.40) 
+    hightax <- boston %>%
+      filter(tax >= 1246.50) 
+
+    length(highcrime$crim)
+    length(highPT$ptratio)
+    length(hightax$tax)
+
+    .
+
+    ```
+
+Only 66 of the suburbs have high crime rates. The other tax ratios seem to equal 0
+
+13. Write a function that calculates 95% confidence intervals for a point estimate. The function should be called my_CI. When called with my_CI(2, 0.2), the function should print out "The 95% CI upper bound of point estimate 2 with standard error 0.2 is 2.392. The lower bound is 1.608."
+
+    ```{r}
+    my_CILB <- function(point_estimate, standard_error) {
+      # Calculate upper and lower bounds for the 95% confidence interval
+      upper_bound <- point_estimate + 1.96 * standard_error
+      lower_bound <- point_estimate - 1.96 * standard_error
+      
+
+      cat("The 95% CI upper bound of point estimate", point_estimate, "with standard error", 
+          standard_error, "is", round(upper_bound, 3), 
+          ". The lower bound is", round(lower_bound, 3), ".\n")
+    }
+
+    my_CILB(2, 0.2)
+    ```
+
+    14\. Create a new function called my_CI2 that does that same thing as the my_CI function but outputs a vector of length 2 with the lower and upper bound of the confidence interval instead of printing out the text. Use this to find the 95% confidence interval for a point estimate of 0 and standard error 0.4.
+
+    ```{r}
+    my_CI2 <- function(point_estimate, standard_error) {
+
+      upper_bound <- point_estimate + 1.96 * standard_error
+      lower_bound <- point_estimate - 1.96 * standard_error
+      
+      return(c(lower_bound, upper_bound))
+    }
+
+    my_CI2(0, 0.4)
+
+    ```
+
+```{=html}
+<!-- -->
+```
+15. Update the my_CI2 function to take any confidence level instead of only 95%. Call the new function my_CI3. You should add an argument to your function for confidence level.
+
+    ```{r}
+    my_CI2 <- function(point_estimate, standard_error, confidence_level = 0.95) {
+      z_value <- qnorm((1 + confidence_level) / 2)
+      
+      upper_bound <- point_estimate + z_value * standard_error
+      lower_bound <- point_estimate - z_value * standard_error
+      
+      return(c(lower_bound, upper_bound))
+    }
+
+    my_CI3(0, 0.4, confidence_level = 0.95)
+
+    my_CI3(2, 0.2, confidence_level = 0.99)
+
+    ```
+
+16. Without hardcoding any numbers in the code, find a 99% confidence interval for Ethnic Heterogeneity in the Angell dataset. Find the standard error by dividing the standard deviation by the square root of the sample size.
+
+    ```{r}
+    my_CI4 <- function(data, CI) {
+      quantiles <- (1 + CI)/2
+      
+      QN <- qnorm(quantiles)
+      
+      sample_mean <- mean(data, na.rm = TRUE)
+      
+      sample_sd <- sd(data, na.rm = TRUE)
+      
+      sample_size <- length(data)
+      
+      standard_error <- sample_sd / sqrt(sample_size)
+      
+      lower_bound <- sample_mean - QN * standard_error
+      upper_bound <- sample_mean + QN * standard_error
+      
+      result <- c("mean" = sample_mean, 
+                  "lower" = lower_bound, 
+                  "upper" = upper_bound)
+      
+      return(result)
+    }
+
+    my_CI4(data = angell_stata$ethhet, CI = 0.99)
+
+    ```
+
+17 Write a function that you can apply to the Angell dataset to get 95% confidence intervals. The function should take one argument: a vector. Use if-else statements to output NA and avoid error messages if the column in the data frame is not numeric or logical.
+
+```{r}
+my_CI_from_vector <- function(vector) {
+  if (is.numeric(vector) || is.logical(vector)) {
+    vector <- na.omit(vector)
+    
+    if (length(vector) > 1) {
+      mean_value <- mean(vector)
+      standard_error <- sd(vector) / sqrt(length(vector))
+      
+      z_value <- qnorm(0.975)  # Z-value for 95% confidence (1.96)
+      lower_bound <- mean_value - z_value * standard_error
+      upper_bound <- mean_value + z_value * standard_error
+      
+      return(c(lower_bound, upper_bound))
+    } else {
+      return(NA)
+    }
+  } else {
+    return(NA)
+  }
+}
+
+my_CI_from_vector(angell$Ethnic_Heterogeneity)
+
+
+```
